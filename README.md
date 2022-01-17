@@ -9,7 +9,7 @@ do this, do the following:
 Open the "Terminal" tab in the lower left pane. This will open a window
 with the "$" prompt. You can then do the following:
 
-$ cd lecture_folder 
-$ git pull origin main
+  $ cd lecture_folder 
+  $ git pull origin main
 
 And the files in this folder will be updated.
