@@ -1,0 +1,681 @@
+---
+title: "BIOS 545 Graphics Part 1"
+author: Steve Pittard, <wsp@emory.edu>
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+## Intro
+
+- R has a powerful environment for visualization of scientific data
+- It provides publication quality graphics, which are fully programmable
+- Easily reproducible
+- Full LaTeX and Sweave support
+- Lots of packages and functions with built-in graphics support 
+- On-screen graphics
+- Can save graphs to Postscript, PDF, jpeg, png, SVG
+
+### History
+
+- R Graph Gallery http://gallery.r-enthusiasts.com/
+
+- R Graphic Manual and Gallery http://rgm2.lab.nig.ac.jp/RGM2/images.php?show=all&pageID=2087
+
+- Grid Graphics - l http://www.stat.auckland.ac.nz/~paul/RGraphics/rgraphics.html
+
+- Lattice Graphics - 
+http://lmdvr.r-forge.r-project.org/figures/figures.html 
+
+- ggplot2 and the tidyverse - https://ggplot2.tidyverse.org/
+
+http://faculty.ucr.edu/~tgirke/HTML_Presentations/Manuals/Rgraphics/Rgraphics.pdf
+
+### Levels
+
+R graphics can be confusing because there are no less than 4 different systems. Let's list them out here and talk about which one(s) to use.
+
+##### Low-Level Capability
+  - Base Graphics (Has Low and High Level functions) 
+  - Grid Graphics
+  
+##### High-Level Capability
+  - Lattice Graphics 
+  - ggplot2
+
+### Base Graphics
+
+- Oldest and most commonly used
+- Uses a "pen-on-paper" model. You can only draw on top of the object. Cannot erase, modify, or delete what has already been drawn.
+- Has both high and low level plotting routines (unique to Base) 
+- Base graphics are fast.
+- Lots of documentation and "google" support
+
+### Grid Graphics
+
+- Developed in 2000 by Paul Murrell
+- Provides a rich set of graphics primitives
+- Uses a system of objects and view ports to make complex objects easier.
+- You will almost never use this directly unless you want to do in- depth programming
+
+### Lattice package
+
+- Developed by Deepayan Sarkar to implement the trellis graphics system described in "Visualizing Data" by Cleveland.
+
+- Easy to create conditioned plots with automatic creation of axes, legends, and other annotations
+
+- Usually considered to be an improvement over Base graphics as it relates to panels
+
+```{r lattice1}
+library(lattice)
+xyplot(mpg~wt | factor(am,labels=c("Auto","Manual")), data=mtcars)
+```
+
+### ggplot2
+
+- Developed starting in 2005 by Hadley Wickham
+
+- ggplot2 is an implementation of Leland Wilkinson's Grammar of Graphics--a general scheme for data visualization which breaks up graph into semantic components such as scales and layers.
+
+- ggplot2 can serve as a replacement for the base graphics in R and contains a number of defaults for web and print display of common scales.
+
+- Is said to be much slower than Base graphics but this isn't a major thing (in my opinion)
+
+## Chart Types
+
+* plot(x,y) where x and y are continuous:
+  - X/Y, scatterplot, pairs, sunflower plots   
+  
+* plot(x,[y]) where x and y are categorical. Note that y can be optional
+  - dotplot, barplot, stacked bar plot, pie chart   
+  
+* plot(x) where x is a single continuous variable:
+  - dotplot, barplot, stripchart, boxplot, density, histogram, QQ Plot    
+
+* plot(x,y) where one of x and y is continuous and the other is discrete
+  - Side-by-Side dotplot and boxplot, notched boxplot   
+  
+
+### Base Graphics Foundations
+
+```{r bg1}
+plot(0:10, 0:10, type="n", xlab="X", ylab="Y", axes=FALSE)
+
+abline(h=seq(0,10,2),lty=3,col="gray90") 
+
+abline(v=seq(0,10,2),lty=3,col="gray90")
+
+text(5,5, "Plot Stuff Here", col="red", cex=1.5) 
+
+box("plot", col="red", lty = "dotted")
+
+box("inner", col="blue", lty = "dashed") 
+
+mtext("South Margin",1,cex=1.2,col="blue") 
+
+mtext("West Margin",2,cex=1.2,col="green") 
+
+mtext("North Margin",3,cex=1.2,col="orange") 
+
+mtext("East Margin",4,cex=1.2,col="purple") 
+
+title("An Example Plot")
+```
+
+Let's do some basic plotting. These two commands do the same thing. Given two vectors, x and y (of same length), do a scatterplot. Typically we would do something like "plot(x,y)". 
+
+```{r bgmt1}
+plot(mtcars$wt, mtcars$mpg, main="MPG vs. Weight")
+```
+We can also plot a single variable:
+
+```{r}
+plot(mtcars$mpg, main="MPG", type="l", xlab="Car Number",ylab="MPG")
+plot(mtcars$mpg, main="MPG", type="b", xlab="Car Number",ylab="MPG")
+```
+
+ We can also plot a single variable:
+ 
+```{r}
+boxplot(mtcars$mpg, main="BoxPlot of MPG", ylab="MPG",col="blue",notch=TRUE)
+boxplot(mtcars$mpg,main="BoxPlot of MPG",ylab="MPG",col="red")
+```
+ 
+ How can I get two plots to be on the same page ?
+ 
+```{r}
+par(mfrow=c(1,2)) # One row and two columns
+plot(mtcars$mpg, main="MPG", type="l", xlab="Car Number",ylab="MPG")
+plot(mtcars$mpg, main="MPG", type="b", xlab="Car Number",ylab="MPG")
+par(mfrow=c(1,1))
+
+```
+ We can create panels:
+ 
+ 
+```{r}
+par(mfrow=c(2,2)) 
+
+plot(mtcars$mpg,main="MPG",xlab="Car",ylab="MPG",type="p") 
+
+plot(mtcars$mpg,main="MPG",xlab="Car",ylab="MPG",type="l") 
+
+plot(mtcars$mpg,main="MPG",xlab="Car",ylab="MPG",type="h") 
+
+plot(mtcars$mpg,main="MPG",xlab="Car",ylab="MPG",type="o") 
+
+legend("topleft",legend=c("Test Legend"),cex=0.8)
+
+par(mfrow=c(1,1))
+```
+ 
+ We usually take this approach when we want to plot data across different categories. Like the mpg vs weight across cylinder types. We have three unique cylinder values:
+
+```{r}
+unique(mtcars$cyl)   # We have three categories so create 3 plots
+
+par(mfrow=c(1,3)) # One row and three columns
+
+fourcyl <- mtcars[mtcars$cyl == 4,] 
+
+sixcyl <- mtcars[mtcars$cyl == 6,] 
+
+eightcyl <- mtcars[mtcars$cyl == 8,]
+
+plot(fourcyl$wt, fourcyl$mpg, main = "MPG vs Wt 4 Cyl", ylim=c(0,40))
+
+plot(sixcyl$wt, sixcyl$mpg, main = "MPG vs Wt 6 Cyl", ylim=c(0,40))
+
+plot(eightcyl$wt, eightcyl$mpg, main = "MPG vs Wt 8 Cyl", ylim=c(0,40))
+
+par(mfrow=c(1,1)) # Reset the plot window
+```
+
+We could automate this using the "split" approach:
+
+```{r}
+par(mfrow=c(1,3)) # One row and three columns 
+
+mysplits <- split(mtcars, mtcars$cyl)
+for (ii in 1:length(mysplits)) {
+  plot(mysplits[[ii]]$wt, mysplits[[ii]]$mpg, 
+       ylim = c(0,40),main=paste("MPG vs weight for",names(mysplits[ii])))
+}
+
+# Better yet we could make this into a function
+cyl.plot <- function(df, fac, numrows=1, numcols=3) { 
+  par(mfrow=c(numrows,numcols))
+  mysplits <- split(df,fac)
+  for (ii in 1:length(mysplits)) {
+    plot(mysplits[[ii]]$wt, mysplits[[ii]]$mpg, 
+         ylim = c(0,40),
+         main=paste("MPG vs weight for",names(mysplits[ii])))
+  }
+}
+
+# Call the function   
+cyl.plot(mtcars,mtcars$cyl)
+```
+
+We can set plot limits and add annotations
+
+```{r}
+plot(mtcars$wt, mtcars$mpg, 
+     xlab = "Weight / 1,000", 
+     ylab = "MPG", 
+     xlim = c(0,10), 
+     ylim = c(0,40))
+```
+```{r}
+plot(mtcars$wt, mtcars$mpg, 
+     xlab = "Weight / 1,000", 
+     ylab = "MPG", 
+     xlim = c(0,10), 
+     ylim = c(0,40))
+
+legend("topright", inset=0.05, "My Data", pch=1, col="black") 
+
+# Could use specific coordinates also
+legend(6.5,35, inset=0.05, "My Data", pch=1, col="black")
+
+
+```
+
+We could also put up our own grid using some "primitive" graphics functions:
+
+```{r}
+plot(mtcars$wt, mtcars$mpg,
+     xlab = "Weight / 1,000",
+     main = "MPG vs. WT") 
+
+# Draws vertical dashed lines at 2,3,4,5 
+abline(v=c(2,3,4,5),lty=2,col="gray")
+
+# Horizontal lines at 10,15,20,25,30
+abline(h=c(10,15,20,25,30), lty=2, col="gray") 
+
+# Could do:
+abline(v=2:5,lty=2,col="gray90") 
+abline(h=seq(10,30,5),lty=2,col="gray")
+```
+We can change the plot character:
+
+```{r}
+plot(mtcars$wt, mtcars$mpg,
+     main="MPG vs WT", col="red", 
+     xlab="Weight in lbs/1,000",
+     ylab="Miles per Gallon", 
+     pch = 3)
+
+legend("topright", inset=0.05, "My Data", pch = 3, col="red") 
+grid(col="blue")
+```
+```{r}
+example(pch)
+```
+### Case Study 1
+
+We could also use information from a data frame to help us print different characters based on value. Like in mtcars. Let's plot MPG vs Weight but pick a different plot character based on Transmission Type. Here is one way to do it:
+
+1. Create a blank plot that sets the limits and title
+2. Extract records for automatic transmission into a data frame
+3. Extract records for manual transmission into a data frame
+4. Use the points command to plot these two different groups using a different
+pch value
+
+```{r}
+# A null plot
+plot(mtcars$wt, mtcars$mpg, type="n", main="MPG vs. Weight")
+
+# Extract cars with an auto transmission (am = 0)
+auto <- mtcars[mtcars$am == 0,] 
+
+# Extract cars with a manual transmission (qm = 1)
+manu <- mtcars[mtcars$am == 1,]
+
+# Put up some points
+points(auto$wt, auto$mpg, pch = 0) 
+points(manu$wt, manu$mpg, pch = 1)
+
+# Display a legend
+legend("topright", inset=0.05, c("manual","auto"), pch = c(1,0))
+```
+But this would be working too hard. No programming is required. Just recognize that the plot characters are selected by a number from 0 to 25. We can exploit this:
+
+```{r}
+mtcars$am
+```
+
+We see that am is 0 or 1 which just so happen to also represent
+valid print characters
+
+```{r}
+plot(mtcars$wt, mtcars$mpg, 
+     pch=mtcars$am,
+     main="MPG vs. Weight", 
+     sub="Different plot chars")
+
+legend("topright", inset=0.05, c("manual","auto"), pch = unique(mtcars$am))
+```
+
+```{r}
+plot(mtcars$wt, mtcars$mpg, 
+     pch=mtcars$am+2,
+     main="MPG vs. Weight", 
+     sub="Different plot chars")
+
+legend("topright", inset=0.05, c("manual","auto"), pch = unique(mtcars$am)+2)
+```
+### Case Study 2
+
+One of the strengths of Base Graphics is that we can build plots in layers. 
+
+First, we initialize a "blank" plot using the plot command but we specify a 
+type of "n". In this case "n" means "NULL". 
+
+Let's then plot wt vs mpg and do it such that the records with a weight below the mean weight of the entire data set are in red and those above the mean weight are in blue.
+
+```{r}
+plot(mtcars$wt,mtcars$mpg,type="n", 
+     xlab="Weight in lbs/1,000", ylab="MPG", main="MPG vs. Weight")
+```
+
+How is this useful ? Well we can add points or lines in stages. This allows us to plot things on an existing plot using specific colors or print characters.
+
+
+```{r}
+plot(mtcars$wt,mtcars$mpg,
+     type="n",xlab="Weight in lbs/1,000", 
+     ylab="MPG", main="MPG vs. Weight")
+
+# Let's get records for each category
+above.mean <- mtcars[mtcars$wt >= mean(mtcars$wt),] 
+below.mean <- mtcars[mtcars$wt < mean(mtcars$wt),] 
+
+# Use the points command to plot each group
+points(below.mean$wt,below.mean$mpg,col="red")
+points(above.mean$wt,above.mean$mpg,col="blue")
+
+# Draw a vertical line where the mean(wt) is
+abline(v=mean(mtcars$wt),lty=2,col="gray")
+```
+Unfortunately there is nothing in the existing data set that tells us if a given row's weight value is greater than or below the mean weight. We could handle this a couple of ways - one of which is to use our knowledge of for loops.
+
+```{r}
+colvec <- ifelse(mtcars$wt >= mean(mtcars$wt),"blue","red")
+colvec
+```
+
+We could now use this information to our advantage:
+
+```{r}
+plot(mtcars$wt,mtcars$mpg,col=colvec)
+```
+
+We can add text to our plot with no problem.
+
+```{r}
+plot(mtcars$wt, mtcars$mpg, 
+     main="Mileage vs. Car Weight", 
+     xlab="Weight",
+     ylab="Mileage", pch=18, col="blue")
+
+text(mtcars$wt, mtcars$mpg, 
+     row.names(mtcars),     # Get the row names
+     cex=0.6,               # Scale the font size
+     pos=4,                 # 1=below, 2=left, 3=above, 4=right
+     col="red")
+```
+
+```{r}
+plot(mtcars$wt, mtcars$mpg, 
+     main="Mileage vs. Car Weight", 
+     xlab="Weight",
+     ylab="Mileage", pch=18, col="blue")
+
+carlabs <- sapply(strsplit(row.names(mtcars)," "), function(x) x[[1]])
+
+carlabs
+```
+
+```{r}
+plot(mtcars$wt, mtcars$mpg, 
+     main="Mileage vs. Car Weight", 
+     xlab="Weight",
+     ylab="Mileage", pch=18, col="blue")
+
+carlabs <- sapply(strsplit(row.names(mtcars)," "), function(x) x[[1]])
+
+text(mtcars$wt, mtcars$mpg, 
+     carlabs,     # Get the row names
+     cex=0.6,               # Scale the font size
+     pos=4,                 # 1=below, 2=left, 3=above, 4=right
+     col="red")
+```
+Let's look at a more involved annotation example. We'll use the same data:
+
+```{r}
+plot(mtcars$mpg ~ mtcars$wt,
+     cex=0.8, pch=21,
+     col="blue",bg="red", 
+     xlab="Wt in Lbs/1,000", 
+     ylab="Miles Per Gallon")
+
+title(main="The mtcars data set wt vs. MPG")
+
+# Next draw a vertical line at the mean of the weight
+abline(v=mean(mtcars$wt),lty=2,col="blue")
+
+# Next draw a horizontal line at the man of the MPG
+abline(h=mean(mtcars$mpg),lty=2,col="blue")
+
+# Draws a diamond at the common mean
+points(mean(mtcars$wt), mean(mtcars$mpg),
+       pch=23,col="black", bg="brown",cex=2)
+```
+
+```{r}
+plot(mtcars$mpg ~ mtcars$wt,
+     cex=0.8, pch=21,
+     col="blue",bg="red", 
+     xlab="Wt in Lbs/1,000", 
+     ylab="Miles Per Gallon")
+
+title(main="The mtcars data set wt vs. MPG")
+
+# Next draw a vertical line at the mean of the weight
+abline(v=mean(mtcars$wt),lty=2,col="blue")
+
+# Next draw a horizontal line at the man of the MPG
+abline(h=mean(mtcars$mpg),lty=2,col="blue")
+
+# Draws a diamond at the common mean
+points(mean(mtcars$wt), mean(mtcars$mpg),
+       pch=23,col="black", bg="brown",cex=2)
+
+# Let's put some custom text on the graph to indicate the mean.
+
+text(mean(mtcars$wt),min(mtcars$mpg), 
+     paste("Mean:",round(mean(mtcars$wt),2)),pos=4)
+
+text(min(mtcars$wt),mean(mtcars$mpg),
+     paste("Mean:",round(mean(mtcars$mpg),2)),adj=c(0,1))
+
+# Note that this is basically equivalent to:
+
+text(3.2,10.4, paste("Mean:",round(mean(mtcars$wt),2)),pos=4)
+
+# text(2,20.09,paste("Mean:",round(mean(mtcars$mpg),2)))
+```
+
+### Custom Axes
+
+Sometimes we want to draw an axis ourselves because R's defaults aren't what we want. Imagine a set of observations over time such as stock market activity. Here is a data frame you can read in that tracks actual stock market performance for Microsoft, (MSFT), for each trading day of the year 2014.
+
+```{r}
+url <- "https://raw.githubusercontent.com/steviep42/bios545_spring_2021/master/DATA.DIR/stock.data.14.csv"
+
+msft <- read.csv(url,stringsAsFactors = FALSE) 
+head(msft)
+```
+
+```{r}
+plot(msft$High,type="l",main="High MSFT Price",
+     xlab="Day of Year",ylab="Price in $") 
+mtext("2014",3)
+```
+
+The day number is okay but we could also the actual dates as labels. But that could be a problem. First, we use the xaxt argument to suppress the printing of the x-axis
+
+```{r}
+plot(msft$High,type="l",main="High MSFT Price", 
+     xlab="Day of Year",ylab="Price in $", xaxt="n")
+
+axis(1,at=1:nrow(msft),labels=msft$Date)
+```
+
+That wasn't so good because the X-axis got really crowded. We can print labels for the x-axis every 30 days or so using this approach.
+
+We could alter this to accommodate an arbitrary number of days and labels.
+
+Notice how we generate sequence that we then use to index into the Dates.
+
+```{r}
+plot(msft$High,type="l",main="High MSFT Price", 
+     xlab="Day of Year",ylab="Price in $", xaxt="n")
+
+mtext("2014",3)
+
+dseq <- seq(1,nrow(msft),30)
+axislabs <- substr(msft$Date[dseq],6,10) 
+axis(1, at=dseq, labels=axislabs, cex.axis=0.8)
+```
+### Working with Colors
+
+```{r}
+colors()
+length(colors())
+```
+
+```{r}
+grep("yellow",colors(),value=TRUE)
+
+grep("purple",colors(),value=TRUE)
+```
+
+Get a copy of the PDF Color Chart from: http://research.stowers-institute.org/efg/R/Color/Chart/ColorChart.pdf
+
+R also has some built in palettes that give you a color scheme from which to choose:
+
+If we have some categories we want to look at we can easily visualize it. Barplots are for plotting tables. Let's count up all the cars by cylinder type from mtcars:
+
+```{r}
+table(mtcars$cyl)
+```
+
+Pass this to a barplot
+
+```{r}
+barplot(table(mtcars$cyl), axes=T, main = "Cylinder Barplot")
+```
+
+```{r}
+barplot(table(mtcars$cyl), axes=T,
+main = "Cylinder Barplot", col=heat.colors(3))
+```
+
+```{r}
+(myt <- table(mtcars$cyl,mtcars$am))
+
+```
+```{r}
+barplot(myt, legend = T, 
+        beside = T, 
+        col=heat.colors(3), main='Cylinder Count by Transmission Type')
+```
+```{r}
+barplot(myt,
+        legend = T, 
+        beside = F, 
+        col=heat.colors(3),
+        main="Cylinder Count by TransmissionType", 
+        ylim=c(0,25))
+```
+
+```{r}
+barplot(myt,
+        legend = T, 
+        beside = F, 
+        col=heat.colors(3),
+        main="Cylinder Count by Transmission Type", 
+        xlim=c(0,25),
+        horiz=T)
+```
+Let's use our new found knowledge of colors
+
+```{r}
+mycols <- rainbow(2)
+mycols
+```
+
+Remember that the transmission types are indicated by a 0 (auto) or 1 (manual). We need to take # this into account when indexing into the mycols vector.
+
+```{r}
+plot(mtcars$wt, mtcars$mpg, col = mycols[mtcars$am+1], pch=19)
+
+legend("topright",c("Auto","Manual"),
+       col = mycols,
+       pch = 19)
+```
+
+Consumer graphs, like those found in newspapers or news magazines, have lots of "junk" attached to them, which, for a statistician, is unnecessary.
+Here is an example found in a copy of the Atlanta Journal Constitution newspaper from some time last year. You can find these in many magazines and papers.
+
+I wrote some R code using Base graphics to approximate this.This took a lot of work since the chart relies on intersecting lines, different colors, custom axes, arrows, and text annotations.
+
+I don't enjoy doing things like this at all. A good plot should tell the story without all the extraneous annotations.
+
+But for the public, this type of chart is standard. See the result on the next slide. It's not a perfect match. The x-axis labels need some more work but it's close enough. The code can be found at:
+
+```{r}
+# Reproduction of a consumer level graphic publication found in the 
+# Atlanta Journal Constitution. 
+# Steve Pittard wsp@emory.edu
+
+# Tuition Data Set - Approximate values
+
+Wyoming <- c(3242,3342,3442,3542,3642,3752,3880,3950,4100,4404)
+Georgia <- c(3411,3630,4000,4200,4500,5000,6000,7600,7700,7823)
+USAver  <- c(4962,5100,5800,6000,6200,6800,7300,8000,8200,8596)
+NewHamp <- c(8085,8300,9000,9800,10150,10900,12000,13750,14500,14665)
+
+tuition <- data.frame(rbind(Wyoming,Georgia,USAver,NewHamp))
+ylims <- c(0,max(tuition[,10]))
+
+plot(1:10,tuition[1,],type="n",lwd=2,col="green",
+     ylab="",ylim=ylims,yaxt="n",bty="n",xaxt="n",
+     xlab="Year",main="Tuition Growth",sub="Figures adjusted for 2014 dollars")
+mcols <- c("#6E8B3D","blue","red","black")
+polygon(c(1,1:10,10),c(0,tuition[4,],0),col="#EEE8AA")
+
+points(1:10,tuition[1,],type="l",lwd=3.5,col="#6E8B3D")
+points(1:10,tuition[2,],type="l",lwd=3.5,col="blue")
+points(1:10,tuition[3,],type="l",lwd=3.5,col="red")
+points(1:10,tuition[4,],type="l",lwd=3.5,col="black")
+
+abline(v=1:10,col="white",lwd=1.5)
+segments(1,seq(2500,15000,by=2500),10,seq(2500,15000,by=2500),lty=3,col="#6E8B3D")
+xlabs <- c(paste(0,1:9,sep=""),"10")
+axis(1,at=1:10,labels=xlabs)
+ylabs <- formatC(seq(0,15000,2500),format="d",big.mark=",")
+ylabs <- paste("$",ylabs,sep="")
+axis(2,at=seq(0,15000,2500),ylabs,las=1)
+mtext("Avg in-state tuition for 4-year public university",side=3)
+
+legend(04,3000,c("Wyoming (Low)"),fill=c("#6E8B3D"),bty="n",cex=0.75)
+legend(04,5700,c("Georgia"),fill=c("blue"),bty="n",cex=0.75)
+legend(04,7300,c("US Avg"),fill=c("red"),bty="n",cex=0.75)
+legend(04,12500,c("New Hampshire (Hi)"),fill=c("black"),bty="n",cex=0.75)
+
+text(1,c(2500,4000,5500,9000),
+     paste("$",formatC(tuition[1:4,1],format="d",big.mark=","),sep=""),pos=4,cex=0.7)
+
+segments(1,c(2500,4000,5500,9000),1.1,c(2500,4000,5500,9000))
+segments(1,2500,1,tuition[1,1])
+segments(1,tuition[2:4,1],1,c(4000,5500,9000))
+
+
+text(9,c(3500,7000,9000,13500),
+     paste("$",formatC(tuition[1:4,10],format="d",big.mark=","),sep=""),pos=4,cex=0.7)
+
+# This could be cleaned up using some programming approaches
+
+segments(9.8,3500,10,3500)
+segments(10,3500,10,tuition[1,10])
+
+segments(9.8,7000,10,7000)
+segments(10,7000,10,tuition[2,10])
+
+segments(10,tuition[3,10],10,9000)
+segments(10,9000,9.8,9000)
+
+segments(9.9,13500,10,13500)
+segments(10,13500,10,tuition[4,10])
+
+
+```
+```{r}
+# Get one million vals from a uniform distro x <- runif(1000000,-3,3)
+myhist <- function(pop,timestosamp, numtosamp, sleep=0.25) {
+  avgvec <- vector() 
+  length(avgvec) <- timestosamp
+  for (ii in 1:timestosamp) {
+  avgvec <- c(avgvec,mean(sample(pop,numtosamp))) 
+  hist(avgvec, main=paste("Histogram - Iteration #",ii,sep=" "), xlim=c(-3,3))
+  Sys.sleep(sleep)
+  } 
+}
+myhist(x,500,5,sleep=.05)
+```
+
