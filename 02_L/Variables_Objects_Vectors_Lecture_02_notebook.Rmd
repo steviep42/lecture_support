@@ -1,5 +1,6 @@
 ---
 title: "Variables, Objects, Vectors"
+author: Steve Pittard <wsp@emory.edu>
 output:
   pdf_document: default
   word_document: default
