@@ -1,0 +1,912 @@
+---
+title: "BIOS 545 Spring 2022 Tidyverse Continued"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+
+## The Tidyverse Continued
+
+There are a number of conveniences offerred by dplyr. There are some nice functions which will aid in the selection of columns which can be helpful when there are a large number of columns. For the examples, we'll keep it basic for now. Check out the diamonds data set
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+data(diamonds)
+glimpse(diamonds)
+```
+
+To pick up where we left off, we can do grouping and summarizing on more than one grouping variable. So for example, lets first determie the median price for a values of the **cut** group
+
+
+```{r}
+diamonds %>% 
+  group_by(cut) %>%
+  summarize(median_price=median(price))
+
+```
+
+Okay, Let's now see the same thing except using **cut** and **color** as grouping variables.
+
+```{r}
+diamonds %>% 
+  group_by(cut,color) %>%
+  summarize(median_price=median(price))
+```
+
+
+Okay, this result is a little hard to read. Why don't we look at the same thing except we will select the top two, in terms of median price, from each combination of cut and color
+
+```{r}
+diamonds %>% 
+  group_by(cut,color) %>%
+  summarize(median_price=median(price)) %>% top_n(2)
+```
+
+We could also arrange this by median price
+
+```{r}
+diamonds %>% 
+  group_by(cut,color) %>%
+  summarize(median_price=median(price)) %>% 
+  top_n(2) %>%
+  arrange(desc(median_price))
+```
+
+
+
+So let's select all the columns that begin with the letter **c** and then determine the average carat size for each value of the **cut** variable
+
+```{r}
+diamonds %>% select(starts_with("c"))
+```
+
+So we could now pass this on to a summarize function
+
+```{r}
+diamonds %>% 
+  select(starts_with("c")) %>% 
+  group_by(cut) %>% summarize(mean_carat=mean(carat))
+```
+We can also select out columns that end with a certain letter.
+
+```{r}
+diamonds %>% select(ends_with("e"))
+```
+
+This next example shows how we can combine these special functions within a bollean expression:
+
+```{r}
+diamonds %>% select(ends_with("e") | contains("pt"))
+```
+
+So consider the following:
+
+```{r}
+diamonds %>% summarize(mean_carat=mean(carat),
+                       mean_price=mean(price),
+                       mean_depth=mean(depth))
+```
+
+There is an easier way to do this:
+
+```{r}
+diamonds %>% 
+  summarize(across(.cols=c("carat","price","depth"),.fns=mean))
+  
+```
+
+We can use the colon operator to select a range of columns in the data set.
+
+```{r}
+diamonds %>% 
+  summarize(across(.cols=price:z,.fns=mean))
+```
+
+We could even generalize this across all numeric variables. This might not make sense depending on the type of data we have but this is a true time saver:
+
+```{r}
+diamonds %>%
+  summarize(across(is.numeric, mean))
+```
+
+Here we use multiple summary functions by using a named list. This is somewhat similar to what we did with the **aggregate** function in native R.
+
+```{r}
+diamonds %>%
+  summarize(across(is.numeric, 
+                   list(mean=mean,sd=sd)))
+```
+
+
+
+Let's continue to explore the power of the tidyverse. One of the things we want to conisder is the concept of **tidy** data. Check out the online book, [R For Data Science](https://bookdown.org/roy_schumacher/r4ds/tidy-data.html), which is discussed this concept at length but we will explore it here. 
+
+The idea of tidy data presents a consistent way for us to organize data to faciliate use with visualization and machine learning. The concepts behind tidy data are not difficult to understand and the tidyverse packages provide functions to help make data tidy.
+
+Let's look at the data sets from the above mentioned book. It turns out that we have direct access to them by loading the **tidyr** package. 
+
+```{r}
+library(tidyr)
+library(ggplot2)
+suppressMessages(library(dplyr))
+```
+
+The following information displays the number of TB cases documented by the World Health Organization in Afghanistan, Brazil, and China between 1999 and 2000. The data contains values associated with four variables (country, year, cases, and population), but each table organizes the values in a different layout. Here is **table1**
+
+```{r}
+table1
+```
+
+Check out **table3**
+
+```{r}
+table3
+```
+
+
+From the R for Data Science book - There are three interrelated rules which make a dataset tidy:
+
+    Each variable must have its own column.
+    Each observation must have its own row.
+    Each value must have its own cell.
+
+This seems intuitive although it is only when you are presented with an ugly data set that you gain an appreciation for how clean data can make your life easier. Here is the visual representation of clean data. It is decepetively simple.
+
+
+![](PICS/tidy.png)
+
+So the first table (table1) seems to conform to the above rules.
+
+```{r}
+table1
+```
+
+What about **table3**? The **rate** column seems to encode both the number of cases and the population in one column. Does this conform to the concept of **tidy**? Well, not really because we basically have two variables (number of cases and population) in one column. 
+
+```{r}
+table3
+```
+
+## the Separate Function
+
+To fix this problem, we’ll need the **separate()** function. This allows us to conveniently separate a variable into two or more columns. IF we don't have a function like **separate** then we might need to do something like this:
+
+```{r}
+# split the rate column into two values
+(hold <- strsplit(table3$rate,"/"))
+```
+
+Next, we bind these two new columns into a data frame
+
+```{r}
+(newcols <- data.frame(do.call(rbind,hold)))
+```
+
+So now we bind the newcols data frame to table3
+
+```{r}
+(newtable3 <- cbind(table3,newcols))
+```
+Let's now drop the **rate** column and give meaingful names to the two new columns
+
+```{r}
+newtable3 <- newtable3[,-3]
+names(newtable3) <- c("country","year","cases","population")
+newtable3
+```
+
+There are ways we might improve upon the above but it's still a bit tedious and involved. This is why the **separate** function can be so helpful. We can solve this in one line!
+
+```{r}
+table3 %>% 
+  separate(rate, into = c("cases", "population"))
+```
+
+Not only do we get two new columns, the original column disappears. Graphically this looks like:
+
+![](PICS/table3.png)
+
+
+Best of all we can use this with the pipe structures that we learned last week.
+
+```{r}
+table3 %>% 
+  separate(rate, into = c("cases", "population")) %>%
+  mutate(year=as.Date(as.character(year),"%Y")) %>% 
+  mutate(year=format(year,"%Y")) %>% 
+  group_by(year) %>% summarize(total_cases=sum(as.numeric(cases))) 
+```
+
+So that's really cool because the **separate** function makes it all so easy to split up a column into multiple columns in one go. Let's check this out a little deeper. 
+
+```{r}
+table3 %>% 
+  separate(rate, into = c("cases", "population")) %>%
+  str()
+```
+
+The default is to interpret the conversion results into characters but we might want them to be numbers since, after all, they are. 
+
+```{r}
+table3 %>% 
+  separate(rate, into = c("cases", "population"),convert=TRUE) %>%
+  str()
+```
+
+This might make the columns more directly usable:
+
+```{r}
+table3 %>% 
+  separate(rate, into = c("cases", "population"),convert=TRUE) %>%
+  group_by(country) %>% summarize(total=sum(cases))
+
+table3 %>% 
+  separate(rate, into = c("cases", "population"),convert=TRUE) %>%
+  group_by(country) %>% summarize(total=sum(cases)) %>%
+  ggplot(aes(x=country,y=total/1000)) + geom_bar(stat="identity") +
+  labs(title="TB Cases by Country for all years",y="TB Cases / 1,000",x="Country") 
+```
+
+We could also chop up the years into century and year:
+
+
+```{r}
+table3 %>% 
+  separate(year, into = c("century", "year"), sep = 2) 
+```
+
+Or combine it all using the pipes
+
+
+```{r}
+table3.new <- table3 %>% 
+  separate(year, into = c("century", "year"), sep = 2) %>%
+  separate(rate, into = c("cases", "population"),convert=TRUE) 
+  
+```
+
+
+Consider the following simulated data.
+
+```{r}
+# Some example data
+df <- data.frame(id=c("001","002","003","004","005","006"),
+                 name=c("Tom Smith","Dee Ford","Mary Russell",
+                                     "Frank Jones","Lisa Miller","Don Draper"),
+                 age=c(32,43,22,39,50,60),
+                 location=c("San Diego,CA","Los Angeles,CA","Monterey,CA",
+                             "Portland,OR","Eugene,OR","Salem,OR"),
+                 blood_pressure=c("120/90","140/85","135/110","125/102","128/92","145/118"),
+                 stringsAsFactors = FALSE)
+
+df
+```
+
+
+Note that the *name* column has first and last names and the *location* column encodes a city and state. And we also have a column with blood pressure information. We might want to split or *separate* these columns out into separate columns to facilitate summaries across states. Why would we to do this ? 
+
+Well what if we wanted to aggregate across states or maybe create a bar chart of average age across states ? Or look at a systolic vs diastolic blood pressure across the States ?  As is, there is no convenient way to access the *State* or blood pressure info. The *separate* function will help. 
+
+
+```{r}
+(split.location <- separate(df,col=location,into=c("city","state"),sep=","))
+```
+
+```{r}
+split.location %>% group_by(state) %>% summarize(ave=mean(age))
+```
+And we could create a bar chart
+
+```{r}
+split.location %>% group_by(state) %>% 
+  summarize(ave=mean(age)) %>% 
+  ggplot(aes(x=state,y=ave)) + geom_bar(stat="identity") + 
+  ggtitle("Average Age Across State") + ylab("Average Age") + xlab("State")
+```
+
+Let's break out the blood pressure by systolic and disastolic:
+
+```{r}
+(split.location.bp <- split.location %>% 
+  separate(col=blood_pressure,into=c("systolic","diastolic"),sep="\\/"))
+```
+
+Plot the systolic vs diastloic for each state. Use facets for this. Given that we don't have much data, the plot isn't mind blowing in any way though we are just trying to illustrate how we reshape the data to suit our interests. 
+
+
+```{r}
+split.location.bp %>% ggplot(aes(x=diastolic,systolic)) + 
+  geom_point() + facet_wrap(~state)
+```
+
+
+## The Unite function
+
+The **separate** funciton has a function that reverses the behavior. That is, we can **unite** columns into a single column. So if we wanted to reverse what we did above then we could do the following:
+
+```{r}
+table3.new
+```
+
+```{r}
+table3.new %>% 
+  unite(year, century, year, sep = "")
+```
+
+![](PICS/table6.png)
+
+## Spreading and Gathering Data
+
+Let's look at the concept of spreading variables across multiple columns as well as gathering variables in multiple columns into fewer columns. This suggests of course, that there are some tidy functions that will help us do this. They are called, quite unsurprisingly, **spread** and **gather**. Let's see what they can do for us. To do this, consider another view of the TB data:
+
+
+```{r}
+table4a
+```
+
+The problem here is that the two columns called **1999** and **2000** could actually be considered as one variable called **year**. That is, the existing columns, **1999** and **2000** could be considered as instances of a **year** variable.  The values under each of these columns are the number of **cases** for the respective country. 
+
+### Gathering
+
+We could call **year** as the **key** under which we want to gather the information. But we also need to describe the column under which we want to place the **values** of the existing variables. We'll call that column **cases**. To summarize, the **gather** function needs 1) a *key** under which to gather the specified data. It also needs a 2) value under which to put the values associated with the data.
+
+```{r}
+table4a %>% 
+  gather(`1999`, `2000`, key = "year", value = "cases")
+```
+
+```{r}
+table4a %>% 
+  gather(`1999`, `2000`, key = "year", value = "cases") %>%
+  group_by(year,country) %>% summarize(total_TB=sum(cases)) 
+```
+Or
+
+```{r}
+table4a %>% 
+  gather(`1999`, `2000`, key = "year", value = "cases") %>%
+  group_by(year,country) %>% summarize(total_TB=sum(cases)) %>%
+  ggplot(aes(x=year,y=total_TB/1000)) + geom_bar(stat="identity") +
+        facet_wrap(~country) + 
+  labs(y="Total TB Cases / 1,000",title="Total TB Cases") 
+```
+
+### Spreading
+
+The opposite of gathering, this could help us with a data format like the following:
+
+```{r}
+table2
+```
+The problem here could be that we have multiple rows for a given country for each year. We might want to at least consolidate the information for Afghanistan in the year 1999 onto one line. 
+
+Much in the same way that we processed the data with **gather** we need a key and a value. In this case the **key** is the variable that we wish to consolidate into a single observation with **value** being the names of the new columns that will replace the **count** column. That is, the new column names will take on the unique values under the **type** column.
+
+```{r}
+spread(table2, key = type, value = count)
+```
+
+![](PICS/spreader.png)
+
+
+
+## Case Study with NIH Data
+
+Let's work with some actual data that relates to NIH Funding Data. This is available at the 
+
+```{r}
+library(readr)
+library(readxl)
+```
+
+Let's read in the data directly from the Excel spreadsheet. This way, we don't have to first save the data from the Excel spreadsheet into a .CSV file although that is always an option. 
+
+```{r}
+# Use the readxl package to get the info
+funding <- read_xlsx("~/Downloads/funding_ga_ma_ca_2.xlsx")
+```
+
+Check out some of the basic information: 
+
+```{r}
+# Get finding in terms of / 1,000,000
+funding$FUNDING <- funding$FUNDING/1000000
+funding %>% slice(1:15)
+```
+What about plotting the data to get an idea about how the states compare across the three years we tracked.
+
+```{r}
+# We'll make YEAR a factor to make the colors descrete
+funding.2 <- funding %>% mutate(YEAR=factor(YEAR))
+funding.2 %>% 
+  group_by(YEAR,STATE) %>% summarize(sm=sum(FUNDING)) %>% 
+  ggplot(aes(x=STATE,y=sm,fill=YEAR)) + 
+  geom_bar(stat="identity",position="dodge") + 
+  labs(title = "NIH Funding to CA,GA, and MD",
+       subtitle = "Sum of Funding $ to Top 5 Organizations in Each State",
+       caption = "Source: NIH Research Portfolio Online Reporting Tools", 
+       x = "Year", y = "$ / 1,000,000") 
+
+```
+
+
+Maryland seems to have not recovered to 2013 levels but the variance in funding seems to be greater in that State which suggests that some of the top earners in that state might not have gotten as much money as they did previously or that maybe not all organizations were present in all three years we tracked. 
+
+```{r}
+funding.2 %>% group_by(STATE) %>% summarize(var=var(FUNDING))
+```
+
+Let's Look at John Hopkins compared to the other top 4 organizations in MD. They typically bring in a significant degree of NIH funding. 
+
+```{r}
+funding.2 %>% filter(STATE=="MD") %>% 
+  group_by(YEAR,ORGANIZATION) %>% 
+  summarize(total=sum(FUNDING)) %>% arrange(desc(total))
+
+```
+
+Now let's look at a typical spreadsheet view of the data wherein the funding for each year is in its own column. This might be more appealing to an accountant although it isn't what we could call *tidy* data simply because each column is in reality an instance of the "YEAR" column. On the other hand, data can be easily shaped and reshaped with R so it's not a big deal. In fact, reshaping it might reveal something interesting.
+
+```{r}
+spread(funding.2,YEAR,FUNDING) %>% 
+  arrange(STATE) %>% slice(1:20)
+```
+Let's find institutions that made the top 5 for all 3 years
+
+```{r}
+spread(funding.2,YEAR,FUNDING) %>% 
+  arrange(STATE) %>% filter(complete.cases(.))
+```
+
+Find organizations that made it into the Top 5 at least one of the years. Notice that Univ of SAN FRAN shows up as being two unique organizations because there is an extra comma in the name for 2015 and 2017. Real data is usually dirty data so this is to be expected. 
+
+```{r}
+spread(funding.2,YEAR,FUNDING) %>% 
+  arrange(STATE) %>% filter(!complete.cases(.))
+
+```
+
+
+
+## Case Study with iris Data
+
+Check out the built in iris data frame. It has observations for 150 flowers. Each observation has the respective species to which that flower belongs as well as four measured variables. 
+
+```{r}
+data(iris)
+head(iris)
+```
+
+```{r}
+pairs(iris[1:4], main = "Edgar Anderson's Iris Data", 
+                 pch = 21, 
+                 bg = c("red", "green3", "blue"))
+```
+
+What if we wanted to plot something that allowed us to compare both Sepal and Petal width and length simultaneously ?  In this graph we are using Species as fill color for the Length and Width variables. 
+
+They appear in the two panels / facets which are the Petal and Sepal portions of each flower. The problem we have is that we can't get a plot like the following without doing some "surgery" on the dataset. This where the separate(), gather(), and the spread() functions come in handy. 
+
+
+```{r}
+# You won't see this in the knitted version
+data(iris)
+iris$id <- formatC(1:nrow(iris),width=3,flag="0")
+iris.tidy <- iris %>% 
+  gather(key=part_attr,val=measure,-Species,-id) %>%
+  separate(col=part_attr, into=c("Part","attr"),sep="\\.") %>%
+  spread(attr,measure)
+```
+
+```{r}
+ggplot(iris.tidy ,aes(x=Width,y=Length,col=Species)) + 
+  geom_point() + facet_wrap(~Part)
+```
+
+Or 
+
+```{r}
+ggplot(iris.tidy ,aes(x=Width,y=Length,col=Part)) + 
+  geom_point() + facet_wrap(~Species)
+```
+
+Why can't we plot this directly from the data? Well, for starters, we have variables that combine both the anatomy and the measurement in one column. At a minimum we would need to separate these columns into different columns. 
+
+### Make an Identifier
+
+So you could say that the Species is the identifier for each row although since there are only three Species overall, there is repetition between the names. Let's add an identifier for each observation because as we reshape the data using various tidyr functions being able to have an identifier might be important.   
+
+
+```{r}
+head(iris)
+```
+
+```{r}
+iris$id <- formatC(1:nrow(iris),width=3,flag="0")
+head(iris)
+```
+
+### Gather up the measured variables
+
+We could use the *gather* function to collapse the measured variable names under one column called *attribute* and a column called *measure* to hold the respective measured value. Note how, in the call to *gather*, I use the negation character to collapse all variables *except* Species which is why that column is preserved in the output.
+
+```{r}
+# Gather up the measured variables into one column
+
+iris.gathered <- gather(iris,
+                        key=part_attr,
+                        val=measure,-Species,-id)
+head(iris.gathered)
+
+# Look at three observations from each Species type
+(iris.gathered %>% group_by(Species) %>% sample_n(3))
+```
+
+On the other hand this doesn't really get us what we want. To get the plot we want requires us to have Petal and Sepal as factors or "id" variables. The length and the width are measured variables so we need to get them into their own columns. First we have to *separate* the Flower "part" (Sepal or Petal) from the "attribute" (width or length):
+
+
+```{r}
+iris.gathered.tidier <- iris.gathered %>% 
+   separate(col=part_attr, into=c("Part","attr"),sep="\\.")
+
+iris.gathered.tidier %>% group_by(Species) %>% sample_n(3)
+```
+So what does this get us ? Well, for starters we have some "tidier data that has a clean separation between the plant part, associated attributes, and measure. 
+
+But we still can't reference the Length and Width directly within a call to ggplot - at least not very conveniently. So we aren't done yet. The next step would be to *spread* the "attr" and "measure" columns. 
+
+```{r}
+iris.gathered.tidiest <- iris.gathered.tidier %>% 
+  spread(attr,measure)
+
+head(iris.gathered.tidiest)
+```
+
+```{r}
+ggplot(iris.gathered.tidiest,
+       aes(x=Width,y=Length,col=Species)) + 
+       geom_point() + facet_wrap(~Part)
+```
+
+
+
+## Joining Data
+### Introduction
+
+This section describes the process of joining data frames which is an important skill to have. It's very useful to know how to **merge** or **join** the data frames. R has a command called **merge** which can handle some of these tasks but if you look in the help pages for this command it will in turn make references to "join operations" which is a more general way to describe merging activity. 
+
+In reality joining tables is quite common in SQL (Structured Query Language) so developing facility with this is a general skill that will pay dividends in the future. Let's start with a very basic example. The data is simple so you can focus on the "joining" activities.
+
+
+```{r}
+inventory <- data.frame(part_num=c("001","002","003"),
+                    description=c("Indispensable Widget",
+                                  "Flux Capacitor",
+                                  "Radiator"),
+                    price=c(20,25,15),stringsAsFactors = FALSE)
+                    
+sales <- data.frame(part_num=c("001","001","001","003","110"),
+                    quantity_sold=c(23,100,44,98,98),
+                    sales_regions=c("east","west","north","north","south"),
+                    stringsAsFactors = FALSE)
+inventory
+
+sales
+```
+
+
+#### Identifying Keys
+
+When we talk about joining or merging data frames we make reference to **keys** which are column names that two or more data frames have in common. This gives us a basis or reference point by which to combine the two data frames.
+
+So what we have here is an inventory data frame that lists part numbers, their descriptions, and current quantity in inventory. Basically, one line for each part. The second data frame, sales, represents the sales of various parts within one or more regions. 
+
+Notice that no quantity of part 2 was sold at all. Notice also that 3 units of part number 1 were sold in three regions. The desire here is to *merge* or *join* these two data frames in various ways. Let's explore these. 
+
+So the **part_num** column in each data frame appears to relate to the same thing so this will be our **key** by which to merge the two data sources. 
+
+To visualize what various joins look like here is a diagram from [R for Data Science](https://r4ds.had.co.nz/) 
+
+![](./PICS/big_join.png)
+
+#### full_join()
+
+Let's start with a **full_join** which will seek to involve all rows in both data frames based on a matching **key** which, in this case, is the **part_num** column. 
+
+Use the two data frames above along with a join command to create a single table that contains a sales report for **all** part numbers even if there were no sales of that part number or it is not in the current inventory. Here is what we want:
+
+```{r}
+full_join(inventory,sales)
+```
+
+This will result in a table that includes all matched records from both the data frames and supply NA values for missing matches on either side. What does "matched records" mean ? 
+
+![](./PICS/inventorymatch1.png)
+
+![](./PICS/salesmatch1.png)
+
+Notice we see part number 002 even though there were no sales - but that's okay. The report requires sales figures for all parts. We also see a row for part 110 even though it doesn't appear in the inventory. Notice that there are missing values. 
+
+The reason we get a value of NA for **description** and **price** in the 6th row is that part number 110 does not exist within the **inventory** data frame. 
+
+So, to reasonably include the information in the fully joined data, the NAs must be provided as placeholders for the missing values. 
+
+Also notice that there are missing values for the quantity and sales_regions relative to part number 002 since it doesn't appear within the sales data frame. 
+
+#### inner_join()
+
+Create a merged or joined table that shows **only** information for parts listed in inventory and only those parts that had at least one transaction. In effect we want only rows that are in common (based on the part_num key) to both data frames. 
+
+The  **inner_join** which will produce a data frame that includes rows pertaining to part numbers *in common* to both data frames. An inner join matches pairs of observations whenever their keys are equal.
+
+```{r}
+inner_join(inventory,sales)
+```
+
+This would mean then that the row in the sales data frame that refers to a part number of 110 would be omitted in the result since it does not occur in the inventory data frame. Part number 002 does not appear in the sales data frame so it is not listed here. 
+
+This is interesting because this kind of thing happens all the time in real life. That is, sometimes a manufacturer will "drop ship" a new part to a customer in an emergency without first entering it into inventory. 
+
+
+#### left_join()
+
+Next up we have the **left_join** which will "favor" the first data frame referenced in the command in that it will include rows from inventory AND rows from **sales** where the **part_num** matches. So part number 002 is still included even though it does not appear in the **sales** data frame. 
+
+I should point out that the left_join is quite possibly the most popular type of join because it allows you to start with one table and determine what rows in a second table match any rows in the first table, based on a **key**. 
+
+```{r}
+left_join(inventory,sales)
+```
+
+
+#### right_join()
+
+The right_join() will favor the second specified data frame which it will return all the rows from sales and rows from sales where the part number matches. This is why we get a line in the result for part 110 that includes missing values for description and price since those values are missing the inventory data frame. 
+
+```{r}
+right_join(inventory,sales)
+```
+
+The four previous join functions (i.e. inner_join, left_join, right_join, and full_join) are so called mutating joins. Mutating joins combine variables from the two data sources to produce a new, mutated data source. 
+
+The final two joins we will discuss, semi_join and anti_join are known as filtering joins because they don't add new combinations. The semi_join uses the second table as a filter for the first. 
+
+#### semi_join()
+
+Returns all rows from "x" (the first table) where there are matching values in "y" while keeping just the columns from "x". Given our two tables, this might answer the question, what part numbers do we have in inventory that were sold?
+
+```{r}
+semi_join(inventory,sales)
+```
+
+#### anti_join()
+
+Anti join does the opposite of semi join. So this answers the question of what part we sold that are NOT in the inventory
+
+```{r}
+anti_join(inventory,sales)
+```
+
+### Case Study San Francisoc Restaurants
+
+The San Francisco Open Data Portal has lots of information online as it relates to the city. This includes information on restaurant inspections. I was able to download this information which comes in three files: businesses, inspections, and violations. To get the information that you might want, such as what restaurants have the most violations, you will need to do things like join the files.
+
+```{r}
+burl <- "https://raw.githubusercontent.com/pittardsp/info550_spring_2018/master/SUPPORT/businesses_plus.csv"
+
+vurl <- "https://raw.githubusercontent.com/pittardsp/info550_spring_2018/master/SUPPORT/violations_plus.csv"
+
+iurl <- "https://raw.githubusercontent.com/pittardsp/info550_spring_2018/master/SUPPORT/inspections_plus.csv"
+
+download.file(burl,"businesses_plus.csv")
+download.file(vurl,"violations_plus.csv")
+download.file(iurl,"inspections_plus.csv")
+
+businesses <- read.csv("businesses_plus.csv",sep=",",
+                       stringsAsFactors=FALSE)
+
+inspections <- read.csv("inspections_plus.csv",sep=",",
+                       stringsAsFactors=FALSE)
+
+violations <- read.csv("violations_plus.csv",sep=",",
+                       stringsAsFactors=FALSE)
+
+
+```
+
+
+
+```{r}
+head(businesses)
+businesses %>% nrow()
+```
+
+
+```{r}
+head(inspections)
+inspections %>% nrow()
+```
+
+```{r}
+head(violations)
+nrow(violations)
+```
+
+
+Relative to the restaurant inspections process the way I understand it is that an inspector will visit a restaurant at some frequency or in response to a diner’s complaint. This will show up in the **inspections** data.
+
+The inspector will evaluate the establishment, document any code violations at a severity level of low,medium,high, and ultimately assign a numeric score from 0 to 100 with the following possible meanings: 0-70: Poor, 71-85: Needs Improvement, 86-90: Adequate, 90-100: Good. 
+This will show up in the **violations** data.
+
+If violations were noted then a followup inspection(s) will usually occur to insure that the violations are adequately addressed. Such visits usually do not involve a “re-scoring”, just a verification that the establishment dealt with the previously observed violations. Evidently this could take multiple visits.
+
+We might then expect that in the inspections file there are multiple rows for a business starting with the original visit and any associated followups. In the case of the followups it looks like the Score is set to NA. Let’s see if that is true. 
+
+According to the inspections file a “Routine-Unscheduled” inspection was performed on 06/05/2013 for business_id 17 that resulted in score of 94 ,which is good, although in consulting the violations file it seems that there were three “Low Risk” violations noted. A re inspection happened on 07/11/2013.
+
+Let's answer some questions. How many restaurants are there? This is probably something we can answer using the businesses table.
+
+
+```{r}
+businesses %>% nrow()
+```
+
+But what if there are duplicated rows? 
+
+```{r}
+businesses %>% distinct() %>% nrow()
+```
+
+How many inspections took place ? 
+
+```{r}
+inspections %>% distinct() %>% nrow()
+```
+
+How many inspections had a score below 70? 
+
+```{r}
+inspections %>% filter(Score < 70)  %>% nrow()
+```
+
+Of the inspections with a Score less than 70, what is the average score?
+
+```{r}
+inspections %>% 
+  filter(Score < 70)  %>% 
+  summarize(mean_under_70=mean(Score))
+```
+What are the percentiles?
+
+```{r}
+inspections %>% 
+    filter(Score < 70) %>% summarize(quantile(Score))
+```
+
+So what is the distribution of Scores ? 
+
+```{r}
+inspections %>%  
+ ggplot(aes(x=Score)) + geom_boxplot() +
+  labs(title="Distribution of SF Restaurant Scores")
+```
+
+So let's filter out the missing values:
+
+```{r}
+inspections %>%  
+ filter(!is.na(Score)) %>% 
+ ggplot(aes(x=Score)) + geom_boxplot() +
+  labs(title="Distribution of SF Restaurant Scores")
+```
+
+
+
+So what are the 8 worst scores ? 
+
+```{r}
+inspections %>% arrange(Score) %>% slice(1:8)
+```
+
+But we don't really know the business names
+
+
+```{r}
+inspections %>% 
+  select(business_id,Score) %>% 
+  left_join(businesses) %>% 
+  select(name,Score) %>% 
+  arrange(Score) %>% 
+  slice(1:8)
+```
+
+Or, we could do it this way
+
+```{r}
+businesses %>% 
+  select(business_id,name,address) %>% 
+  left_join(inspections) %>% 
+  select(name,address,Score) %>% 
+  arrange(Score) %>% 
+  slice(1:8)
+```
+
+
+So, for all restaurants, how many violations exist for each ?
+
+```{r}
+violations %>% 
+  group_by(business_id) %>% 
+  summarize(total=n()) %>% 
+  left_join(businesses) %>% 
+  select(name,total) %>%
+  arrange(desc(total))
+```
+
+However, if you look at the businesses data, there are many different locations for places like Starbucks, Kentucky Fried Chicken, and McDonalds. 
+
+```{r}
+businesses %>% 
+  select(business_id,name) %>%
+  left_join(violations) %>% 
+  select(business_id,name) %>%
+  group_by(name) %>%
+  summarize(total=n()) %>%
+  arrange(desc(total))
+```
+
+How many distinct Starbucks locations are there ?
+
+```{r}
+businesses %>% filter(grepl("STARBUCK",name))
+```
+So let's get a single number
+
+```{r}
+businesses %>% 
+  filter(grepl("STARBUCK",name)) %>%
+  group_by(business_id) %>% nrow()
+```
+
+So how many violations does each Starbucks location actually have ? 
+
+```{r}
+businesses %>% 
+  filter(grepl("STARBUCK",name)) %>%
+  select(name,business_id) %>% 
+  left_join(violations) %>% 
+  group_by(business_id) %>%
+  summarize(total=n()) %>%
+  arrange(desc(total))
+```
+
+We can also exploit the fact that we have date information. Let’s determine how many inspections took place after April 01, 2014 ? This is also an opportunity to use the dplyr function called lubridate
+
+```{r}
+ inspections %>% 
+  mutate(date=ymd(date)) %>% 
+  filter(date >= ymd("20140401"))
+```
+
+But wait, some of those did not involve a rescoring as evidenced by the presence of the NA in the Score column:
+
+```{r}
+inspections %>% 
+  mutate(date=ymd(date)) %>% 
+  filter(date >= ymd("20140401")) %>%
+  filter(!is.na(Score))
+```
+
+```{r}
+inspections %>% 
+  mutate(date=ymd(date)) %>% 
+  filter(date >= ymd("20140401")) %>%
+  filter(!is.na(Score)) %>% nrow()
+```
+
+
