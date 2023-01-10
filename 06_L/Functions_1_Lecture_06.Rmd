@@ -1,0 +1,764 @@
+---
+title: "BIOS545_Spring_2021_Functions_1"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Functions
+
+Creating functions in R is very simple.
+
+* Users communicate with R almost entirely through functions anyway 
+
+* You should write a function whenever you find yourself going through the same sequence of steps at the command line, perhaps with small variations
+
+* You can reuse code that you have found to be useful. You can even package it up and give it to others
+
+* Once you  have "trustworthy" code you can relax and not worry so much about errors
+
+
+Let's write a function to create compute the square root of a number
+
+```{r}
+# Version 1 - Simple Square root
+
+myfunc <- function(somenum) {
+  retval <- sqrt(somenum)
+  return(retval)
+}
+```
+
+It's easy to then turn around and use it
+
+```{r}
+myfunc(4)
+```
+But function development is a never ending process. We want to be able to handle negative numbers.
+
+```{r}
+# Version 2 - Square root and complex numbers
+
+myfunc <- function(somenum) {
+  if (somenum < 0 ) {
+      retval <- sqrt(as.complex(somenum))
+  } else {
+      retval <- sqrt(somenum)
+  }
+  return(retval)
+}
+```
+
+We can now use negative input
+
+```{r}
+myfunc(-4)
+```
+
+And we can make the accomodation of negative numbers to be optional.
+
+```{r}
+# Version 3 - Provide and argument to select complex capability 
+# or not
+
+myfunc3 <- function(somenum,complex="n") {
+  if (somenum < 0 & complex == "n") {
+     stop("HEY !! - Cannot take square root of negative number")
+  } else if (somenum < 0 & complex == "y") {
+     retval <- sqrt(as.complex(somenum))
+  } else {
+     retval <- sqrt(somenum)
+  }
+  return(retval)
+}
+```
+
+
+```{r}
+myfunc3(-4,"y")
+```
+
+In general its easy to see the function definitions of many R functions. Simply type the name:
+
+
+```{r}
+ls
+```
+
+Sometimes its not so easy to see the contents and you have to hunt for them
+
+```{r}
+t.test
+```
+
+Aha ! "t.test" is a S3-method and you can have a look at implemented methods on objects by doing:
+
+```{r}
+methods(t.test) 
+```
+
+```{r}
+getAnywhere(t.test.default) 
+```
+
+```{r}
+methods(median) 
+```
+
+
+```{r}
+getAnywhere(median.default) 
+```
+
+Use the args and example commands to get more info for a function. Of course use the ? to get even more help. We covered the main ways of getting help for R functions in the first week.
+
+```{r}
+args(ls)
+```
+
+```{r}
+args(mean)
+example(mean)
+```
+
+
+Functions are created using the function() directive and are
+stored as R objects just like anything else. In particular, they are R objects of class ``function''
+
+```{r eval=FALSE}
+my.cool.function <- function(<arguments>) {
+
+## Do something interesting
+## Return a value(s)
+
+}
+```
+
+* Functions can be passed as arguments to other functions
+
+* Functions can be nested, so that you can define a function
+inside of another function
+
+* The return value of a function is the last expression in the function body to be evaluated.
+
+Let's look at some formal definitions
+
+```{r eval=FALSE}
+my_func <- function(arglist) {
+   expr
+   return(value) # You should have only ONE return statement
+}
+
+```
+
+```{r}
+my_func <- function(somenum) {
+   my.return.val <- sqrt(somenum)
+   return(my.return.val)
+}
+
+my_func(10)
+```
+
+Note that once you create a function you can retrieve its contents and edit it using the fix function. But better to use the Edit Window in RStudio. Change your function over time and reload it to register new versions by highlighting it and clicking "Run"
+
+Some guidelines:
+
+* You should have only one return statement per function
+
+* It should generally be the very last statement in the function
+
+* A return is not strictly required although in my opinion it should be
+
+* You can return a vector, list, matrix, or dataframe
+
+* A list provides the most generality but it might be too much depending on what it is you want to accomplish
+
+* If you want to return data of different types then returning a list is your only choice (e.g. look at the results from the lm function)
+
+When creating functions, first determine what it is you want to do. This is easy for purposes of this class as you will be told what the function should do and accomodate:
+
+* What should the function should do
+
+* What will the function accept as input
+
+* What will the function return
+
+
+Make a shell that looks like the following:
+
+```{r}
+myfunc <- function(somevec) {
+
+# Code goes here
+
+} 
+```
+
+Define a function called **pythag** that, given the two side lengths of a triangle, will compute the length of the third side:
+
+```{r}
+pythag <- function(a,b) {
+#
+# Input: a,b - real numbers
+#
+# Output: c - a real number representing the length of the 
+#             hypoteneuse
+#
+    c <- sqrt(a^2 + b^2)
+    return(c) 
+}
+
+pythag(4,5)
+```
+
+```{r}
+x <- 4
+y <- 5
+
+pythag(x,y)
+```
+
+```{r}
+pythag(a = 4, b = 5)
+```
+
+We can return pretty much any kind of R structure we would like. If you remember from the section on lists this is, in part, why lists exist. To let you return a number of things in a single structure. Recall that the lm function does this
+
+```{r}
+data(mtcars)
+
+my.lm <- lm(mpg ~ wt, data = mtcars)
+
+typeof(my.lm)
+
+ls(my.lm)
+
+my.lm$call
+
+my.lm$rank
+```
+
+You too can create a return list stucture also:
+
+```{r}
+pythag <- function(a,b) {
+    c <- sqrt(a^2 + b^2)
+    myreturnlist <- list(hypoteneuse = c, sidea = a, sideb = b) 
+    return(myreturnlist)
+}
+pythag(3,4)   # We get back a list
+
+```
+
+```{r}
+pythag(3,4)$sidea
+```
+
+## Error Checking
+
+What happens if you give the function some bad stuff ?
+
+```{r error}
+pythag <- function(a,b) {
+    c <- sqrt(a^2 + b^2)
+    myreturnlist <- list(hypoteneuse = c, sidea = a, sideb = b) 
+    return(myreturnlist)
+}
+```
+
+```{r eval=FALSE}
+pythag(3,"3")
+
+pythag()
+
+pythag(3,)
+```
+
+You could set some default values:
+
+```{r}
+pythag <- function(a = 4, b = 5) {
+      c <- sqrt(a^2 + b^2)
+      myreturnlist <- list(hypoteneuse = c, sidea = a, sideb = b) 
+      return(myreturnlist)
+}
+
+pythag()
+```
+
+We could also do some error checking
+
+```{r}
+pythag <- function(a = 4, b = 5) {
+     if (!is.numeric(a) | !is.numeric(b)) {
+   		stop("I need real values to make this work")
+     }
+     c <- sqrt(a^2 + b^2)
+     myreturnlist <- list(hypoteneuse = c, sidea = a, sideb = b) 
+     return(myreturnlist)
+}
+```
+```{r eval=FALSE}
+pythag(3,"5")
+```
+
+```{r}
+pythag <- function(a = 4, b = 5) {
+     if (!is.numeric(a) | !is.numeric(b)) {
+   		stop("I need real values to make this work")
+     }
+     if (a <=0 | b <= 0) {
+ 			stop("Arguments need to be positive")
+     }
+     c <- sqrt(a^2 + b^2)
+     myreturnlist <- list(hypoteneuse = c, sidea = a, sideb = b) 
+
+     return(myreturnlist)
+
+} # End Function
+
+pythag(-3,3)
+```
+Always create a function whenever you have some block of code that works well. This will prevent you from having to type it in the code every time you wish to execute it. 
+
+It can be edited over time as you need to make changes to it. Functions don't need to be complicated to be useful.
+
+```{r}
+is.odd <- function(someval) {
+     retval <- 0  # Set the return value to a default
+
+     if (someval %% 2 != 0) {
+        retval <- TRUE
+     } else {
+        retval <- FALSE
+     }  
+     return(retval)
+}
+is.odd(3)
+```
+
+This works on single values. It could be changed to work with single values or vectors
+
+```{r}
+is.odd <- function(someval) {
+  retvec <- vector()
+  for (ii in 1:length(someval)) {
+    if (someval[ii] %% 2 != 0) {
+        retvec[ii] <- TRUE
+    } else {
+        retvec[ii] <- FALSE
+    }
+  }
+  return(retvec)
+}  # End function
+
+is.odd(3)
+numbers <- c(9,9,4,4,6,10,7,18,2,10)
+is.odd(numbers)
+```
+
+```{r}
+numbers[is.odd(numbers)]   # Very useful
+```
+
+Let's look at some of the structures from last week to see how they might look as functions. We used the following approach to take a series of X values, plug them into a function to get resulting Y values, and then plot them.
+
+```{r}
+y <- vector()
+x <- seq(0,3)      
+for (ii in 1:length(x)) {
+  y[ii] <- (x[ii])^2 
+}
+
+plot(x,y,main="Super Cool Data Plot",type="l")
+
+```
+
+
+```{r}
+myplotter <- function(xvals, mfunc) {   # begin function
+  
+  # Function at which to evaluate each x (must be valid)
+  # Input: xvalues - a vector
+  #      : mfunc - a function to apply to each value of xvalues
+  # Output: A plot 
+  
+  yvals <- vector()   # setup a blank vector to hold y-values
+  
+  for (ii in 1:length(xvals)) {   # begin for loop
+    yvals[ii] <- mfunc(xvals[ii])
+  }                               # end for loop
+  
+  main="Super Cool DataPlot"
+  plot(xvals, yvals, main=main,type="l",col="blue")
+  
+}  # End function 
+
+xvals <- seq(-3,3,0.005)
+myplotter(xvals,sin)
+```
+
+
+```{r}
+myplotter(xvals,cos)
+```
+
+We could add in "arguments" to influence the color of the plot. We could also return the generated y values if we wanted to.
+
+```{r}
+myplotter <- function(xvals, mfunc, plotcolor="blue") {
+
+# Function at which to evaluate each x (must be valid)
+# Input: xvalues - a vector of values
+#      : mfunc - a function to apply to xvalues
+#      : plotcolor - the color used when plotting
+# Output: A plot and the xvals and yvals used to make that plot
+
+   yvals <- vector()
+   for (ii in 1:length(xvals)) {
+     yvals[ii] <- mfunc(xvals[ii])
+   }
+  
+   plot(xvals, yvals, 
+        main="Super Cool DataPlot",type="l",col=plotcolor)
+  
+   retlist <- list(x=xvals, y=yvals)
+   return(retlist)
+}
+
+xvals <- seq(-3,3,0.5)
+myplotter(xvals, cos, plotcolor="red")
+```
+
+```{r}
+myplotter(xvals,sin,plotcolor="green")
+```
+
+Write a function that finds the minimum value in a vector. Take this from last week and make it a function:
+
+
+```{r}
+set.seed(188)
+
+# 1,000 random elements from a N(20,4)
+somevector <- rnorm(1000)  
+
+mymin <- somevector[1] # Set the minimum to an arbitrary value
+ 
+for (ii in 1:length(somevector)) {
+  if (somevector[ii] < mymin) {
+     mymin <- somevector[ii]
+  }
+}
+
+mymin
+```
+
+```{r}
+mymin <- function(somevector) {
+
+# Function to find the minimum value in a vector
+# Input: somevector - A numeric vector
+# Output: A single value that represents the minimum
+
+  mymin <- somevector[1] # Set the minimum to an arbitrary value
+
+# Now loop through the entire vector. If we find a value less than 
+# mymin then we set mymin to be that value.
+
+  for (ii in 1:length(somevector)) {
+    if (somevector[ii] < mymin) {
+      mymin <- somevector[ii]
+    }
+  }
+  return(mymin)
+}
+
+newnorm <- rnorm(1000)
+mymin(newnorm)
+min(newnorm)
+```
+
+Let's make an argument that let's us specify the min or max
+
+```{r}
+myextreme <- function(somevector, action="min") {
+
+  if (action == "min") {
+     myval <- somevector[1] # Set the minimum to an arbitrary value
+
+     for (ii in 1:length(somevector)) {
+       if (somevector[ii] < myval) {
+         myval <- somevector[ii]
+       }
+     }    # End for
+     
+  # If action is not "min" then we assume the "max" is wanted
+     
+  } else {   
+
+     myval <- somevector[1] # Set the maximum to an arbitrary value
+
+     for (ii in 1:length(somevector)) {
+       if (somevector[ii] > myval) {
+         myval <- somevector[ii]
+       }
+     }            # End for
+  }               # End If  
+  return(myval)
+}
+```
+
+```{r}
+set.seed(231)
+testvec <- rnorm(100)
+
+myextreme(testvec,"min")
+
+myextreme(testvec,"max")
+
+min(testvec)
+
+max(testvec)
+```
+
+Last time we looked at for-loops to process data frames that we had split up by a factor:
+
+```{r}
+mysplits <- split(mtcars, mtcars$cyl)
+
+for (ii in 1:length(mysplits)) { 
+    cat("Split ",names(mysplits)[ii]," has ",
+         nrow(mysplits[[ii]]),"rows \n")
+}
+
+```
+
+```{r}
+myfunc <- function(somedf, somefac) {
+  
+# Function to split a data frame by a given factor
+# Input: somedf - A data frame, somefac - a factor by which to split somedf
+# Output: A list containing a count of records in each group
+
+  retlist <- list()    # Empty list to return group record count 
+  mysplits <- split(somedf,somefac)  # Split the data frame by somefac
+  
+  for (ii in 1:length(mysplits)) {  # loop through the splits
+    retlist[[ii]] <- nrow(mysplits[[ii]]) 
+  }
+  names(retlist) <- names(mysplits)
+  return(retlist)
+}
+
+myfunc(mtcars,mtcars$cyl)
+```
+
+It is worth it to note that the previous function could be rewritten using the lapply function
+
+
+```{r}
+myfunc <- function(somedf, somefac) {
+  
+# Function to split a data frame by a given factor
+# Input: somedf - A data frame, somefac - a factor by which to split somedf
+# Output: A list containing a count of records in each group
+
+  mysplits <- split(somedf,somefac)
+  return(lapply(mysplits,function(x) nrow(x)))
+}
+
+myfunc(mtcars,mtcars$am)
+```
+
+## Anonymous Functions
+
+* Anonymous functions are those that are created for "one-off" jobs. 
+
+* They usually show up when using the apply family of functions (lapply, apply, and sapply). 
+
+* Think of anonymous functions as being temporary. We don't even bother to name them but they still behave just like any other function.  
+
+
+```{r}
+my.mat <- as.matrix(mtcars[,c(1,3:6)])
+head(my.mat)
+```
+
+In this example we call the mean function on all the columns in the matrix. 
+Note that the mean function isn't anonymous. It has a name.
+
+
+```{r}
+apply(my.mat,2, mean)
+```
+
+But what if we wanted to provide our own custom function ? Well we could write one in advance and then use it with apply. Here we write a function to sum all elements in a vector.
+
+```{r}
+mysum <- function(x) {
+   return(sum(x))
+}
+```
+
+
+```{r}
+apply(my.mat,2,mysum)
+```
+
+But since this function is so simple we could define it as we make the call to apply.
+
+```{r}
+apply(my.mat, 2, function(x) sum(x))
+```
+
+This function lives only for the length of the call to apply. It is so ``temporary'' that we don't even bother to give it a name so it is an \emph{anonymous} function.
+
+```{r}
+my.mat <- as.matrix(mtcars[,c(1,3:6)])
+```
+
+```{r}
+apply(my.mat,2, function(x) {c(mean=mean(x),sd=sd(x),range=range(x))})
+```
+
+```{r}
+my.mat <- as.matrix(mtcars[,c(1,3:6)])
+
+apply(my.mat,2, function(x) {
+                     c(mean=mean(x),
+                     sd=sd(x),
+                     range=range(x))
+                  })
+```
+
+In my opinion it is better to first define the function before using it. I feel that this makes it easier since you can fully test and debug the function independently of the apply command.
+
+```{r}
+mysummary <- function(x) {
+  retvec <- c(mean=mean(x),sd=sd(x),range=range(x))
+  return(retvec)
+}
+
+apply(my.mat,2,mysummary)
+```
+
+Let's write a function to compute the median of a vector. Computing the median of a vector involves finding the middle value in a vector. 
+
+To do this you have to first determine if a vector is of even length or odd length. Based on that answer you will need to apply a different formula. 
+
+As an example consider the vector below:
+
+```{r}
+exampodd <- c(3,6,9,1,10)
+
+(svec <- sort(exampodd))
+```
+
+
+So what element is in the middle of the sorted vector ? The third element whose value is 6.
+
+Next, divide the length of the sorted vector in half and use one of the numeric functions (round or ceiling) to get the middle element number and then use that to index into the vector. 
+
+So in our case we have ``3'' as the middle element number (not value) so svec[3] is equal to 6. Does this match what the built in R function returns ?
+
+```{r}
+exampodd <- c(3,6,9,1,10)
+
+(svec <- sort(exampodd))
+
+idx <- ceiling((length(svec))/2)
+svec[idx]
+
+median(svec)
+```
+
+But what about the case wherein the length of the vector is even ? How do
+we find its median ?
+
+```{r}
+( exampeven <- c(11,9,4,7) )
+
+svec <- sort(exampeven)
+
+idx <- (length(svec))/2      # element 2 is one of the middle vals
+
+mean(c(svec[idx],svec[idx+1]))  # Add one to element number (not value)
+
+median(exampeven)
+```
+
+Here we sort the vector, then divide its length in half to find the middle
+two values after which we take their average. As before we'll need to use one or more of the numeric functions to access the correct elements.
+
+Here, the middle two elements of the sorted vector are 7 and 9 so we take their mean to get a value of 8.
+
+```{r}
+exampeven <- c(11,9,4,7)
+
+(mys <- sort(exampeven))
+```
+
+```{r}
+mean(c(7,9))
+median(exampeven)
+```
+
+Here is some ``psuedo code'' for finding the median of a vector
+
+```{r eval=FALSE}
+
+Sort the vector
+
+If the length of the vector is odd
+
+      Divide the length by 2 and pass it to the ceiling function
+      Use this to index into the sorted vector to get the median
+      Store the result in a return variable
+
+else
+      Divide its length by 2 
+      Get the numeric result "n" and use it as an index into the sorted vector
+      Also get the value associated with element n+1
+      Take the mean of the numeric result and the numeric result + 1
+      Store the result in a return variable
+
+```
+
+
+Okay so let's play a dice game wherein we keep rolling a single dice until we get a certain number. So we won't know in advance how many times we need to roll the dice to reach the target number. For example how many times do we need to roll the dice before we get a 6 ? We don't know. To program this then perhaps a while loop might be effective.
+
+
+Here is some pseudo code for doing this
+
+   Pick a target number (set a default for the argument)
+   
+   Set up a counter variable to determine how many rolls it took 
+   before seeing the target
+   
+   Roll the dice and save the result into a variable
+   
+   While that variable is not equal to the target number then keep 
+   rolling the dice and increment the counter
+   
+   Once you roll the target number return the counter variable.
+
+
+```{r eval=FALSE}
+roller <- function(target=6) {
+  # Input: target (the number we are trying to get)
+  # Output: a single numeric value representing the number of rolls it 
+  #         took to get the value
+            
+  counter <- 1   # initialize the counter
+  
+  (your code goes here)
+  
+  return(counter)
+}
+```
+
+
